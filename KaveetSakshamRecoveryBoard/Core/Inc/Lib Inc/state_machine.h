@@ -14,9 +14,14 @@
 //Should correspond with the state types enum below
 #define STARTING_STATE STATE_APRS
 
+#define STATE_WAIT_WDT_TIME_MIN 10
+
+#define STATE_WAIT_WDT_TIME_TICKS tx_s_to_ticks(60*STATE_WAIT_WDT_TIME_MIN)
+
 //Flags inside of our state machine event flags
 #define STATE_COMMS_MESSAGE_AVAILABLE_FLAG (1 << 0)
 #define STATE_CRITICAL_LOW_BATTERY_FLAG (1 << 1)
+#define STATE_WDT_FLAG (1 << 2)
 
 #define ALL_STATE_FLAGS (STATE_COMMS_MESSAGE_AVAILABLE_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
 

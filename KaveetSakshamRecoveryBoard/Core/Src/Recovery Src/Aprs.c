@@ -41,9 +41,6 @@ void aprs_thread_entry(ULONG aprs_thread_input){
     //Generate Aprs sine table
     aprs_transmit_init();
 
-    //We arent in dominica by default
-    bool is_in_dominica = true;
-
     //Main task loop
     while(1){
 
@@ -117,6 +114,7 @@ void aprs_sleep(void){
  *
  * Returns: the current state of our configuration (whether or not VHF is configured for dominica
  */
+__attribute__((unused))
 static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
 
     //If the GPS is in dominica, but we are not configured for it, switch to dominica

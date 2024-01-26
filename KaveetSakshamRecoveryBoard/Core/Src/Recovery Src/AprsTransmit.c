@@ -28,8 +28,6 @@ void aprs_transmit_init(void){
 
 bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length){
 
-//	calcSineValues();
-
 	//Timer variables for transmitting bits
 	TX_TIMER bit_timer;
 

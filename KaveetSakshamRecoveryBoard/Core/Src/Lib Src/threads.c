@@ -16,8 +16,6 @@ Thread_HandleTypeDef threads[NUM_THREADS];
 TX_TIMER heartbeat_timer;
 TX_TIMER bootloader_check_timer;
 
-static void priv__heartbeat(ULONG heartbeat_input);
-
 #if USB_BOOTLOADER_ENABLED
 static void priv__check_usb_boot(ULONG timer_input){
 	static uint16_t consecutive = 0;
@@ -34,6 +32,7 @@ static void priv__check_usb_boot(ULONG timer_input){
 }
 #endif
 
+#if HEARTBEAT_ENABLED
 static void priv__heartbeat(ULONG heartbeat_input){
 	for(int i = 0; i < 15; i++){
 				HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
@@ -41,7 +40,7 @@ static void priv__heartbeat(ULONG heartbeat_input){
 	}
 	 HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);//ensure light is off after strobe
 }
-
+#endif
 
 
 void threadListInit(void){

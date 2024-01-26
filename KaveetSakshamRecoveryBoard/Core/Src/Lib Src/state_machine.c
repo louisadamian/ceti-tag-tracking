@@ -23,6 +23,13 @@ static State state = STARTING_STATE;
 extern Thread_HandleTypeDef threads[NUM_THREADS];
 extern VHF_HandleTypdeDef vhf;
 
+// Wait mode watchdog timer
+static TX_TIMER state_machine_wait_wdt;
+
+static void priv__wdt_trigger(ULONG unused_input) {
+	tx_event_flags_set(&state_machine_event_flags_group, STATE_WDT_FLAG, TX_OR);
+}
+
 void state_machine_set_state(State new_state){
 	//actions to take when exiting current state
 	switch(new_state){
@@ -30,6 +37,7 @@ void state_machine_set_state(State new_state){
 			break;
 
 		case STATE_WAITING:
+			tx_timer_delete(&state_machine_wait_wdt);
 			break;
 
 		case STATE_APRS:
@@ -59,7 +67,17 @@ void state_machine_set_state(State new_state){
 		case STATE_WAITING:
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
+			
 			//ToDo: Low Power Mode - UART wakeup
+			
+			//Start Watch Dog Timer
+			tx_timer_create(
+				&state_machine_wait_wdt,
+				"Watchdog Timer",
+				priv__wdt_trigger, 0,
+				STATE_WAIT_WDT_TIME_TICKS, 0,
+				TX_AUTO_ACTIVATE
+			); 
 			break;
 
 		case STATE_APRS:
@@ -120,10 +138,19 @@ void state_machine_thread_entry(ULONG thread_input){
 			//enter a critical low power state (nothing runs)
 			state_machine_set_state(STATE_CRITICAL);
 		}
+		else if(actual_flags & STATE_WDT_FLAG) {
+			// watchdog timer triggered!!!
+			// Mainboard not responding(?), start recovery
+			state_machine_set_state(STATE_APRS);
+		}
 		else if(actual_flags & STATE_COMMS_MESSAGE_AVAILABLE_FLAG){
+			// reset WDT 
+			tx_timer_deactivate(&state_machine_wait_wdt);
+			tx_timer_change(&state_machine_wait_wdt, STATE_WAIT_WDT_TIME_TICKS, 0);
+			tx_timer_activate(&state_machine_wait_wdt);
+
 			//parse message from pi
 			PiRxCommMessage *message = (PiRxCommMessage *)pi_comm_rx_buffer[pi_comm_rx_buffer_start];
-
 			switch (message->header.id) {
 				//State Change Message
 				case PI_COMM_MSG_START: {

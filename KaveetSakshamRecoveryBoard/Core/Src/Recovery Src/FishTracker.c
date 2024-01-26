@@ -43,33 +43,32 @@ void fishtracker_thread_entry(ULONG thread_input){
 		//Thus, we mimic this by turning on and off the PTT, to simulate an ON/OFF wave.
 		//
 		//Set PTT true to get the ON cycle.
-		vhf_tx(&vhf);
-
-		//Go to sleep for the ON period
-		HAL_Delay(FISHTRACKER_ON_TIME_MS);
-//		tx_thread_sleep(FISHTRACKER_ON_TIME_TICKS);
+		if(vhf_tx(&vhf) == HAL_OK) {
+			//Go to sleep for the ON period
+			HAL_Delay(FISHTRACKER_ON_TIME_MS);
+		    // tx_thread_sleep(FISHTRACKER_ON_TIME_TICKS);
+		}
 
 		//Start the OFF cycle
 		#if FISHTRACKER_OFF_TIME_MS > VHF_MAX_WAKE_TIME_MS
 			vhf_sleep(&vhf);
 			//Go to sleep again for the off period.
-			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS - VHF_MAX_WAKE_TIME_MS);
+			
+			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS - tx_ms_to_ticks(VHF_MAX_WAKE_TIME_MS));
 		#else
 			vhf_rx(&vhf);
 			//Go to sleep again for the off period.
-			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS);
+			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS - tx_ms_to_ticks(VHF_MAX_WAKE_TIME_MS));
 		#endif
 	}
 }
 
 
 static void calcFishtrackerDacValues(){
-
-	for (uint8_t i = 0; i < FISHTRACKER_NUM_DAC_SAMPLES; i++){
-
-		//Based off the IOC, our DAC is configurd to go through DMA.
-		//We just want a one value output, so just make the entire array just one value
-		fishtracker_dac_input[i] = 255;
-	}
-
+	//Based off the IOC, our DAC is configurd to go through DMA.
+	//We just want a one value output, so just make the entire array just one value
+	memset(fishtracker_dac_input, 0, sizeof(fishtracker_dac_input));
+	// for (uint8_t i = 0; i < FISHTRACKER_NUM_DAC_SAMPLES; i++){
+		// 	fishtracker_dac_input[i] = 255;
+	// }
 }
