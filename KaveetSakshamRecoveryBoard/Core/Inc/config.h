@@ -16,6 +16,7 @@
 #define RTC_ENABLED 0
 #define UART_ENABLED 1
 #define HEARTBEAT_ENABLED 0
+#define WDT_ENABLED 0
 
 #define IN_DOMINICA 1
 

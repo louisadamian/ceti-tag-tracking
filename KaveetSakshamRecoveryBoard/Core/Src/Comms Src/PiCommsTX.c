@@ -21,14 +21,16 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
 	uint8_t msg[256];
 } Packet;
 
-void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
-	PiCommHeader gps_header = {
+void pi_comms_tx_aprs_freq(float freq){
+	PiRxCommMessage pkt = {
+		.header = {
 			.start_byte = PI_COMMS_START_CHAR,
-			.id = PI_COMM_MSG_GPS_PACKET,
-			.length = len,
+			.id = PI_COMM_MSG_CONFIG_APRS_FREQUENCY,
+			.length = sizeof(float),
+		},
+		.data.f32_pkt =freq,
 	};
-	HAL_UART_Transmit(&huart2, (uint8_t *) &gps_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
-	HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, (uint8_t *) &pkt, (sizeof(PiCommHeader) + sizeof(float)), HAL_MAX_DELAY);
 }
 
 void pi_comms_tx_callsign(const char *callsign){
@@ -43,6 +45,28 @@ void pi_comms_tx_callsign(const char *callsign){
 	HAL_UART_Transmit(&huart2, (uint8_t *) &pkt, (sizeof(PiCommHeader) + strlen(callsign)), HAL_MAX_DELAY);
 }
 
+void pi_comms_tx_critical_voltage(float voltage_v) {
+	PiRxCommMessage pkt = {
+		.header = {
+			.start_byte = PI_COMMS_START_CHAR,
+			.id = PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE,
+			.length = sizeof(float),
+		},
+		.data.f32_pkt = voltage_v,
+	};
+	HAL_UART_Transmit(&huart2, (uint8_t *) &pkt, (sizeof(PiCommHeader) + sizeof(float)), HAL_MAX_DELAY);
+}
+
+void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
+	PiCommHeader gps_header = {
+			.start_byte = PI_COMMS_START_CHAR,
+			.id = PI_COMM_MSG_GPS_PACKET,
+			.length = len,
+	};
+	HAL_UART_Transmit(&huart2, (uint8_t *) &gps_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
+}
+
 void pi_comms_tx_ssid(uint8_t ssid){
 	Packet pkt = {
 		.header = {
@@ -54,3 +78,5 @@ void pi_comms_tx_ssid(uint8_t ssid){
 	};
 	HAL_UART_Transmit(&huart2, (uint8_t *) &pkt, (sizeof(PiCommHeader) + 1), HAL_MAX_DELAY);
 }
+
+

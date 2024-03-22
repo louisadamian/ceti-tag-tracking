@@ -17,7 +17,7 @@
 TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 
 //If simulating, set the simulation state defined in the header file, else, enter data capture as a default
-static State state = STARTING_STATE;
+static State state = -1;
 
 //Threads array
 extern Thread_HandleTypeDef threads[NUM_THREADS];
@@ -26,13 +26,18 @@ extern VHF_HandleTypdeDef vhf;
 // Wait mode watchdog timer
 static TX_TIMER state_machine_wait_wdt;
 
+#if WDT_ENABLED
 static void priv__wdt_trigger(ULONG unused_input) {
 	tx_event_flags_set(&state_machine_event_flags_group, STATE_WDT_FLAG, TX_OR);
 }
+#endif
 
 void state_machine_set_state(State new_state){
+	if(state == new_state)
+		return; //nothing to do
+
 	//actions to take when exiting current state
-	switch(new_state){
+	switch(state){
 		case STATE_CRITICAL:
 			break;
 
@@ -69,7 +74,7 @@ void state_machine_set_state(State new_state){
 			aprs_sleep();	//VHF: OFF
 			
 			//ToDo: Low Power Mode - UART wakeup
-			
+#if WDT_ENABLED
 			//Start Watch Dog Timer
 			tx_timer_create(
 				&state_machine_wait_wdt,
@@ -78,6 +83,7 @@ void state_machine_set_state(State new_state){
 				STATE_WAIT_WDT_TIME_TICKS, 0,
 				TX_AUTO_ACTIVATE
 			); 
+#endif
 			break;
 
 		case STATE_APRS:
@@ -114,7 +120,7 @@ void state_machine_thread_entry(ULONG thread_input){
 
 
 	//Check the initial state and start in the appropriate state
-	state_machine_set_state(state);
+	state_machine_set_state(STARTING_STATE);
 	vhf_set_freq(&vhf, g_config.aprs_freq);
 
 #if BATTERY_MONITOR_ENABLED
@@ -231,7 +237,7 @@ void state_machine_thread_entry(ULONG thread_input){
 					memcpy(comment_buffer, &message->data, len);
 					comment_buffer[len] = '\0';
 
-					//ToDo: implement APRS comment assignment
+					aprs_set_comment(comment_buffer, len);
 					break;
 				}
 
@@ -270,7 +276,7 @@ void state_machine_thread_entry(ULONG thread_input){
 				}
 
 				case PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE: {
-					//ToDo: return critical voltage setting to pi
+					pi_comms_tx_critical_voltage(g_config.critical_voltage);
 					break;
 				}
 
@@ -280,7 +286,7 @@ void state_machine_thread_entry(ULONG thread_input){
 				}
 
 				case PI_COMM_MSG_QUERY_APRS_FREQ: {
-					//ToDo: implement
+					pi_comms_tx_aprs_freq(g_config.aprs_freq);
 					break;
 				}
 

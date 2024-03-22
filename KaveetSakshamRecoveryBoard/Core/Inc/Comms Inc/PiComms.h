@@ -139,6 +139,7 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
         PiCommAPRSFreq		 aprs_freq_MHz;
         char                 string_pkt[256];
         uint8_t              u8_pkt;
+        float				 f32_pkt;
     } data;
 }PiRxCommMessage;
 
@@ -151,9 +152,10 @@ extern volatile uint_fast8_t pi_comm_rx_buffer_end;
 
 void pi_comms_rx_thread_entry(ULONG thread_input);
 
-void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
-
+void pi_comms_tx_aprs_freq(float freq);
 void pi_comms_tx_callsign(const char *callsign);
+void pi_comms_tx_critical_voltage(float voltage_v);
+void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
 void pi_comms_tx_ssid(uint8_t ssid);
 
 #endif //INC_COMMS_INC_PICOMMS_H_
