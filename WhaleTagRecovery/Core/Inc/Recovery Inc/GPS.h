@@ -36,8 +36,8 @@
 
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
-
 #define DOMINICA_LAT_BOUNDARY 17.71468
+
 
 typedef enum __GPS_MESSAGE_TYPES {
 	GPS_SIM = 0,

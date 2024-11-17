@@ -56,6 +56,7 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef handle_GPDMA1_Channel2;
 DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 /* USER CODE BEGIN PV */
@@ -92,7 +93,18 @@ static void MX_ADC4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+extern void Gps_UARTEx_RxEventCallback(uint16_t Size);
+extern void piComm_UARTEx_RxEventCallback(uint16_t Size);
 
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+  // selected what to do based on on uart event occurs on
+	if(huart->Instance == USART3){
+		Gps_UARTEx_RxEventCallback(Size);
+	} else if(huart->Instance == USART2) {
+		piComm_UARTEx_RxEventCallback(Size);
+	}
+	return;
+}
 /* USER CODE END 0 */
 
 /**
@@ -403,6 +415,8 @@ static void MX_GPDMA1_Init(void)
     HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
     HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
+    HAL_NVIC_SetPriority(GPDMA1_Channel2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel2_IRQn);
 
   /* USER CODE BEGIN GPDMA1_Init 1 */
 

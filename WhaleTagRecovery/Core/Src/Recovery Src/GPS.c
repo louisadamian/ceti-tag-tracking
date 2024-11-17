@@ -61,61 +61,53 @@ volatile uint8_t found_start = 0;
 // === PRIVATE METHODS ===
 
 // === PUBLIC METHODS ===
-/**
- * @brief UART IT complete callback
- * 
- * @param huart 
- */
+void Gps_UARTEx_RxEventCallback(uint16_t Size) {
+	// seperate messages
+	static int remaining = 0;
+	int nmea_start = -1;
+	int new = 0;
+	Size += remaining;
+	for (int i = 0; i < Size; i++){
+		//find sentence start
+		switch(rx_buffer[i]) {
+			case NMEA_START_CHAR:
+				nmea_start = i;
+				break;
 
+			case '\n': /* fallthrough */
+			case '\r':
+				if (nmea_start == -1)
+					break; //sentence end with no start if you reach here
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
- //restarts the DMA listening of the UART rx (next 247 bytes)
-	if(huart->Instance == USART3){
-		// seperate messages
-		int nmea_start = -1;
-		int new = 0;
-		for (int i = 0; i < Size; i++){
-			//find sentence start
-			switch(rx_buffer[i]) {
-				case NMEA_START_CHAR:
-					nmea_start = i;
-					break;
+				gps_buffer[gpsBuffer_write_index].length = ((i) - nmea_start);
+				memcpy(&gps_buffer[gpsBuffer_write_index].sentence[0], &rx_buffer[nmea_start], gps_buffer[gpsBuffer_write_index].length);
+				gps_buffer[gpsBuffer_write_index].sentence[gps_buffer[gpsBuffer_write_index].length] = '\0';
+				gpsBuffer_write_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
+				new = 1;
+				//flag thread to process sentence
+				nmea_start = -1;
+				break;
 
-				case '\n': /* fallthrough */
-				case '\r':
-					if (nmea_start == -1)
-						break; //sentence end with no start if you reach here
-
-					gps_buffer[gpsBuffer_write_index].length = ((i) - nmea_start);
-					memcpy(&gps_buffer[gpsBuffer_write_index].sentence[0], &rx_buffer[nmea_start], gps_buffer[gpsBuffer_write_index].length);
-					gps_buffer[gpsBuffer_write_index].sentence[gps_buffer[gpsBuffer_write_index].length] = '\0';
-					gpsBuffer_write_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
-					new = 1;
-					//flag thread to process sentence
-					nmea_start = -1;
-					break;
-
-				default:
-					break;
-			}
+			default:
+				break;
 		}
-		int remaining = 0;
-		//(nmea_start == -1) => no start found //flush entire buffer
-		//(nmea_start == 0) => sentence too long //flush entire buffer
-		if (nmea_start > 0) {
-			remaining = sizeof(rx_buffer) - nmea_start;
-			memmove(&rx_buffer[0], &rx_buffer[nmea_start], remaining); //shift sentence start to beginning of buffer
-		}
-
-		if(new){
-			tx_event_flags_set(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR);
-		}
-
-		HAL_UARTEx_ReceiveToIdle_DMA(&huart3, &rx_buffer[remaining], sizeof(rx_buffer) - remaining); //initiate next transfer
-		__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel0,DMA_IT_HT);//we don't want the half done transaction interrupt
 	}
-	return;
+	remaining = 0;
+	//(nmea_start == -1) => no start found //flush entire buffer
+	//(nmea_start == 0) => sentence too long //flush entire buffer
+	if (nmea_start > 0) {
+		remaining = sizeof(rx_buffer) - nmea_start;
+		memmove(&rx_buffer[0], &rx_buffer[nmea_start], remaining); //shift sentence start to beginning of buffer
+	}
+
+	if(new){
+		tx_event_flags_set(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR);
+	}
+
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, &rx_buffer[remaining], sizeof(rx_buffer) - remaining); //initiate next transfer
+	__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel0,DMA_IT_HT);//we don't want the half done transaction interrupt
 }
+
 
 /**
  * @brief Returns the latest raw gps message pointer if it exists, otherwise returns NULL ptr;
@@ -154,14 +146,14 @@ void gpsBuffer_thread(ULONG thread_input) {
         while(gpsBuffer_read_index != gpsBuffer_write_index){
 			NmeaString *read_sentence = &gps_buffer[gpsBuffer_read_index];
 			//quick validation
-        	if ((memcmp(&read_sentence->sentence[3], "GLL,", 4) == 0)
-        		|| (memcmp(&read_sentence->sentence[3], "GGA,", 4) == 0)
-				|| (memcmp(&read_sentence->sentence[3], "RMC,", 4) == 0)
-        	){
+//        	if ((memcmp(&read_sentence->sentence[3], "GLL,", 4) == 0)
+//        		|| (memcmp(&read_sentence->sentence[3], "GGA,", 4) == 0)
+//				|| (memcmp(&read_sentence->sentence[3], "RMC,", 4) == 0)
+//        	){
         		pi_comms_tx_forward_gps(read_sentence->sentence, read_sentence->length);
 				gpsBuffer_newest_index.value = gpsBuffer_read_index;
 				gpsBuffer_newest_index.some = 1;
-        	}
+//        	}
 
             gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
         }
