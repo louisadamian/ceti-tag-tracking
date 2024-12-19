@@ -41,6 +41,7 @@ void comms_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void pi_comms_rx_thread_entry(ULONG thread_input){
 
 	#if UART_ENABLED
+	pi_comms_tx_init();
 	tx_event_flags_create(&pi_comms_event_flags_group, "Pi Comms RX Event Flags");
 
 	HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, comms_UART_RxCpltCallback);
